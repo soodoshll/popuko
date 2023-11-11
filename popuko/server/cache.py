@@ -6,9 +6,11 @@ class Node:
     def __init__(self,
                  token_ids: List[int],
                  kv_cache: torch.Tensor, 
+                 logits: torch.Tensor,
                  parent: Optional['Node'] = None):
         self.token_ids = token_ids
         self.kv_cache = kv_cache
+        self.logits = logits
         self.parent = parent
         self.children = []
 
@@ -37,21 +39,6 @@ class TrieCache:
                 return ret
         return None
 
-class CachedTransformer:
-    def __init__(self, model, tokenizer = None):
-        self.model = model
-        self.tokenizer = tokenizer
-
-    def generate(self, prompt: str | List[int]):
-        if isinstance(prompt, str):
-            prompt = self.tokenizer(prompt)
-        pass
-
 if __name__ == '__main__':
     model = transformers.AutoModelForCausalLM.from_pretrained('gpt2')
     tokenizer = transformers.AutoTokenizer.from_pretrained('gpt2')
-    
-    cached_model = CachedTransformer(model, tokenizer)
-    cached_model.generate("I say it once")
-    cached_model.generate("I say it once again")
-    cached_model.generate("I say it once again and again")
