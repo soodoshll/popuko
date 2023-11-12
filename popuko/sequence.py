@@ -2,8 +2,9 @@ from typing import Optional, Union
 import transformers
 import torch
 
+
 class TokenSeq:
-    def __init__(self, model, tokenizer, token_ids:Union[str, list], kvcache = None):
+    def __init__(self, model, tokenizer, token_ids: Union[str, list], kvcache=None):
         self.model = model
         self.tokenizer = tokenizer
         if isinstance(token_ids, str):
@@ -30,13 +31,13 @@ class TokenSeq:
         else:
             kv = None
         return TokenSeq(self.model, self.tokenizer, self.token_ids[start:stop:step], kv)
-    
+
     def __str__(self):
         return self.tokenizer.decode(self.token_ids, skip_special_tokens=True)
-    
+
     def generate(self, max_new_tokens=20):
         if self.kvcache is None:
-            kvcache_len = 0 
+            kvcache_len = 0
             input_ids = self.token_ids
         else:
             kvcache_len = self.kvcache[0][0].shape[2]
@@ -45,7 +46,7 @@ class TokenSeq:
             input_ids = self.token_ids[-1:]
             self.kvcache = [[t[:, :, :-1] for t in layer_kv] for layer_kv in self.kvcache]
             kvcache_len = self.kvcache[0][0].shape[2]
-        
+
         # argmax sampling
         cnt = 0
         while cnt < max_new_tokens and input_ids[-1] != self.tokenizer.eos_token_id:
@@ -58,9 +59,10 @@ class TokenSeq:
             kvcache_len = self.kvcache[0][0].shape[2]
             self.token_ids = torch.cat([self.token_ids, input_ids])
         return TokenSeq(model, tokenizer, self.token_ids, self.kvcache)
-        
-model = transformers.AutoModelForCausalLM.from_pretrained('gpt2')
-tokenizer = transformers.AutoTokenizer.from_pretrained('gpt2')
+
+
+model = transformers.AutoModelForCausalLM.from_pretrained("gpt2")
+tokenizer = transformers.AutoTokenizer.from_pretrained("gpt2")
 
 
 s = TokenSeq(model, tokenizer, "The university of Toronto is in the city of Toronto")
@@ -73,6 +75,6 @@ print(s2)
 s3 = s2.generate()
 print(s3)
 
-s4 = TokenSeq(model, tokenizer, "The university of Toronto is") 
+s4 = TokenSeq(model, tokenizer, "The university of Toronto is")
 print(s4)
 print(s4.generate())
