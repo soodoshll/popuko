@@ -41,7 +41,6 @@ def insert_yield(func):
     exec(compiled_ast, func.__globals__, local_vars)
     return local_vars[func.__name__]
 
-
 def query(func):
     modified_func = insert_yield(func)
 
