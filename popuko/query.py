@@ -2,6 +2,8 @@ import ast
 import inspect
 import textwrap
 
+from .server import DEFAULT_SERVER
+
 class YieldString(ast.NodeTransformer):
     def visit_Expr(self, node):
         return ast.Expr(ast.Yield(node.value))
@@ -47,3 +49,7 @@ def query(func):
         return gather_outputs(modified_func, *args, **kwargs)
 
     return prompt_func
+
+
+def generate(max_new_tokens=500, temperature=0):
+    return None
