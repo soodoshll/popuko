@@ -279,7 +279,7 @@ async def _main():
 
     if args.check:
         ground_truth = model.generate(
-            torch.tensor([input_ids], device="cuda", dtype=torch.long),  max_length=1000
+            torch.tensor([input_ids], device="cuda", dtype=torch.long),  max_length=100
         )
         ground_truth = tokenizer.batch_decode(ground_truth)
         print(ground_truth)
@@ -287,9 +287,9 @@ async def _main():
     tasks = []
     torch.cuda.synchronize()
     start_t = time.time()
-    for i in range(1):
+    for i in range(100):
         await asyncio.sleep(0.1)
-        tasks.append(asyncio.create_task(server.request(input_ids, 1000, eos_token_id=tokenizer.eos_token_id, temperature=0.7)))
+        tasks.append(asyncio.create_task(server.request(input_ids, 10, eos_token_id=tokenizer.eos_token_id, temperature=0.7)))
     reqs = await asyncio.gather(*tasks)
     print("time elapsed:", time.time() - start_t, server.build_kv_time)
     server.stop()

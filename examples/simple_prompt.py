@@ -7,8 +7,9 @@ if __name__ == "__main__":
     @query
     def example():
         "The University of Toronto is located in"
-        generate()
+        A = generate()
         "The number of students is"
-        generate()
+        B = generate()
 
-    print(example())
+    ret = example()
+    print(ret)

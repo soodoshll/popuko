@@ -1,3 +1,5 @@
+from typing import Optional
+
 import ast
 import inspect
 import textwrap
@@ -49,6 +51,16 @@ def query(func):
 
     return prompt_func
 
+class GenerateFuture:
+    def __init__(self, generate_config: dict):
+        self.generate_config = generate_config
+        self.prompt: Optional[str] = None
+    
+    def set_prompt(self, prompt:str):
+        self.prompt = prompt
+    
+    async def request(self):
+        return await DEFAULT_SERVER.request(self.prompt, **self.generate_config)
 
 def generate(max_new_tokens=500, temperature=0):
-    return None
+    return GenerateFuture({'max_new_tokens': max_new_tokens, 'temperature': temperature})
