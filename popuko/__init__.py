@@ -1,1 +1,1 @@
-from .query import query, generate, init_hf_llm
+from .query import query, generate, init_llm

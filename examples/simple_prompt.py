@@ -4,13 +4,16 @@ from popuko import query, generate
 import asyncio
 
 if __name__ == "__main__":
-    popuko.init_hf_llm('facebook/opt-1.3b')
+    popuko.init_llm('facebook/opt-125m')
 
     @query(' ')
     def example():
         "The University of Toronto is located in"
-        generate(max_new_tokens=10, temperature=0.9)
+        A = generate(max_new_tokens=10, temperature=0.9)
+        A
         "The number of students is"
-        generate(max_new_tokens=5, temperature=0.9)
+        B = generate(max_new_tokens=5, temperature=0.9)
+        B
 
-    print(asyncio.run(example()))
+    out = asyncio.run(example().wait())
+    print(out)

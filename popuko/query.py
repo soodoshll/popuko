@@ -8,6 +8,7 @@ import atexit
 
 import popuko.server
 from popuko.server import PopukoServer
+from .future import StringFuture
 import transformers
 
 DEFAULT_SERVER = None
@@ -58,11 +59,11 @@ def query(delimiter='\n'):
         modified_func = insert_yield(func)
 
         def prompt_func(*args, **kwargs):
-            return gather_outputs(modified_func, delimiter, *args, **kwargs)
+            return StringFuture(gather_outputs(modified_func, delimiter, *args, **kwargs))
         return prompt_func
     return func_factory
 
-def init_hf_llm(model: str, tokenizer: Optional[str]=None, max_batch_size: int=4, use_cache=True):
+def init_llm(model: str, tokenizer: Optional[str]=None, max_batch_size: int=4, use_cache=True):
     global DEFAULT_SERVER, DEFAULT_TOKENIZER
     if tokenizer is None:
         tokenizer = model
@@ -82,6 +83,7 @@ class GenerateFuture:
         self.args = args
         self.kwargs = kwargs
         self.prompt: Optional[str] = None
+        self._out = None
     
     def set_prompt(self, prompt:str):
         self.prompt = prompt
@@ -89,7 +91,14 @@ class GenerateFuture:
     def request(self) -> Coroutine:
         prompts = DEFAULT_TOKENIZER(self.prompt).input_ids
         out = DEFAULT_SERVER.request(prompts, *self.args, **self.kwargs)
+        self._out = out
         return out
+    
+    def output(self) -> str:
+        return DEFAULT_TOKENIZER.decode(self._out)
+
+class QueryOutput():
+    pass
 
 def generate(max_new_tokens=500, temperature=0):
     return GenerateFuture(max_new_tokens=max_new_tokens, temperature=temperature)
