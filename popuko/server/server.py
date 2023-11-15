@@ -120,6 +120,15 @@ class PopukoServer:
             if next_token == 0:
                 raise RuntimeError("Unexpected token generated")
             req.add_token(next_token)
+            if self.use_cache:
+                num_input_ids = req.input_ids_len() - 1
+                kv_cache = KVCache(output.past_key_values)
+                if req.has_cache():
+                    new_kv = kv_cache[i, -num_input_ids:]
+                    new_kv = KVCache.cat([req.kv_cache, new_kv])
+                else:
+                    new_kv = kv_cache[i, -num_input_ids:]
+                req.update_kv_cache(new_kv)
             if req.finished():
                 if self.use_cache:
                     self._cache_write_back(req)
@@ -128,15 +137,7 @@ class PopukoServer:
             else:
                 new_reqs.append(req)
                 # update kv_cache
-                if self.use_cache:
-                    num_input_ids = req.input_ids_len() - 1
-                    kv_cache = KVCache(output.past_key_values)
-                    if req.has_cache():
-                        new_kv = kv_cache[i, -num_input_ids:]
-                        new_kv = KVCache.cat([req.kv_cache, new_kv])
-                    else:
-                        new_kv = kv_cache[i, -num_input_ids:]
-                    req.update_kv_cache(new_kv)
+
         return new_reqs
 
     def _concat_kv_cache(self, reqs: Sequence[Request]) -> Optional[torch.Tensor]:
@@ -233,11 +234,11 @@ class PopukoServer:
                     req_buf.append(req)
             if len(req_buf) == 0:
                 break
+            print(f"[server step] batch size = {len(req_buf)}")
             input_ids, attn_mask, kv_cache_tensor = self._build_batch(req_buf)
             output = self._run_model(
                 input_ids=input_ids, attention_mask=attn_mask, use_cache=self.use_cache, past_key_values=kv_cache_tensor
             )
-
             # sampling and cache write back
             req_buf = self._process_batch(req_buf, output)
 
