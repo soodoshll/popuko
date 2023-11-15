@@ -21,7 +21,7 @@ class Request:
     def __init__(
         self, 
         prompt: List[int], 
-        output_len: Optional[int] = None, 
+        max_new_tokens: Optional[int] = None, 
         kv_cache: Optional[KVCache] = None, 
         eos_token_id: Optional[int | Set[int]]=None,
         temperature: float = 0,
@@ -30,7 +30,7 @@ class Request:
         # Should keep constant
         self.prompt: List[int] = prompt
         self.kv_cache: Optional[KVCache] = kv_cache
-        self.output_len: Optional[int] = output_len
+        self.max_new_tokens: Optional[int] = max_new_tokens
         self.eos_token_id = eos_token_id
         self.temperature = temperature
 
@@ -43,7 +43,7 @@ class Request:
         self._generated_tokens.append(token)
 
     def finished(self) -> bool:
-        return len(self._generated_tokens) >= self.output_len or self._generated_tokens[-1] == self.eos_token_id
+        return len(self._generated_tokens) >= self.max_new_tokens or self._generated_tokens[-1] == self.eos_token_id
 
     def update_kv_cache(self, cache: KVCache) -> None:
         self.kv_cache = cache
@@ -62,6 +62,9 @@ class Request:
 
     def tokens(self) -> List[int]:
         return self.prompt + self._generated_tokens
+    
+    def new_tokens(self) -> List[int]:
+        return self._generated_tokens
 
     def has_cache(self) -> bool:
         return self.kv_cache is not None
@@ -83,7 +86,7 @@ class PopukoServer:
         self.server_thread: Optional[threading.Thread] = None
 
     def launch(self):
-        self.server_thread = threading.Thread(target=self._main_loop)
+        self.server_thread = threading.Thread(target=self._main_loop, daemon=True)
         self.server_thread.start()
 
     def _find_kv_cache(self, req: Request):
@@ -223,7 +226,6 @@ class PopukoServer:
                     except queue.Empty:
                         break
                 if req == "stop":
-                    print("server exiting")
                     self.finished = True
                 else:
                     if self.use_cache:
@@ -240,6 +242,8 @@ class PopukoServer:
             req_buf = self._process_batch(req_buf, output)
 
     async def request(self, *args, **kwargs):
+        if self.server_thread is None:
+            raise RuntimeError("The server has not been launched yet.")
         req = Request(*args, **kwargs)
         self.queue.put(req)
         await asyncio.to_thread(req._event.wait)
@@ -250,14 +254,6 @@ class PopukoServer:
     def stop(self):
         self.queue.put("stop")
         self.server_thread.join()
-
-def init_hf_llm(model: str, tokenizer: Optional[str]=None, max_batch_size: int=4, use_cache=True):
-    global DEFAULT_SERVER, DEFAULT_TOKENIZER 
-    if tokenizer is None:
-        tokenizer = model
-    model = transformers.AutoModelForCausalLM.from_pretrained(model)
-    DEFAULT_SERVER = PopukoServer(model, max_batch_size=max_batch_size, use_cache=use_cache)
-    DEFAULT_TOKENIZER = transformers.AutoTokenizer.from_pretrained(tokenizer)
 
 
 async def _main():
